@@ -1,0 +1,16 @@
+title,year,problem,findings,limitations,cluster
+Federated Learning for Mobile Devices,2020,Decentralized model training without sharing raw data,Federated averaging achieves near-centralized accuracy,High communication cost and data heterogeneity,0
+Graph Neural Networks in Drug Discovery,2021,Predicting molecule properties efficiently,GNNs outperform traditional chemoinformatics models,Scalability on large molecular graphs,1
+Explainable AI for Healthcare,2022,Improving trust in medical AI predictions,Attention-based models enhance interpretability,Subjectivity in interpretation evaluation,2
+Vision Transformers for Image Classification,2021,Replace CNNs with attention-based architectures,Transformers outperform ResNets on large datasets,Require extensive pretraining data,0
+Speech Recognition using Deep Learning,2019,Improving accuracy in noisy environments,CNN-LSTM hybrids achieve better noise robustness,Latency unsuitable for real-time systems,1
+Self-Supervised Learning in NLP,2020,Leveraging unlabeled text data for representation learning,Masked language models enable transfer learning,Compute-intensive training process,0
+Climate Prediction using Ensemble Models,2022,Forecasting temperature and rainfall variations,Stacked ensemble improves accuracy over single models,Dependent on quality of input data sources,1
+Autonomous Driving with Multi-Sensor Fusion,2021,"Combining camera, LiDAR, and radar data for navigation",Sensor fusion enhances obstacle detection reliability,Synchronization and calibration challenges,1
+Quantum Machine Learning for Optimization,2023,Solving combinatorial optimization using quantum circuits,Quantum annealing achieves faster convergence on small datasets,Limited by qubit noise and availability,1
+Ethical Implications of Generative AI,2023,Managing bias and misinformation in AI-generated content,Human-in-the-loop review reduces ethical risks,Difficult to scale for massive AI outputs,2
+Reinforcement Learning for Robotics,2020,Enabling robots to learn complex motor control tasks,Policy gradient methods achieve superior adaptability,Requires extensive simulation data,0
+IoT Security using Machine Learning,2019,Detecting anomalies in connected devices,Random forest models detect intrusions with 95% accuracy,Fails under adversarial attacks,1
+Zero-Shot Learning for Object Recognition,2021,Recognizing unseen classes using semantic embeddings,Visual-semantic alignment improves unseen class prediction,Bias towards seen classes,0
+Large Language Models for Code Generation,2023,Automatically writing code from natural language,Codex and CodeT5 achieve high accuracy in structured tasks,Struggle with ambiguous or incomplete instructions,0
+AI-based Crop Disease Detection,2022,Identifying plant diseases from leaf images,CNN models achieve 97% accuracy under controlled conditions,Fails under variable lighting and real-world noise,1

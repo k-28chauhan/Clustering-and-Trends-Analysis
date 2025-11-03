@@ -1,0 +1,107 @@
+[
+  {
+    "title": "Federated Learning for Mobile Devices",
+    "year": 2020,
+    "problem": "Decentralized model training without sharing raw data",
+    "findings": "Federated averaging achieves near-centralized accuracy",
+    "limitations": "High communication cost and data heterogeneity"
+  },
+  {
+    "title": "Graph Neural Networks in Drug Discovery",
+    "year": 2021,
+    "problem": "Predicting molecule properties efficiently",
+    "findings": "GNNs outperform traditional chemoinformatics models",
+    "limitations": "Scalability on large molecular graphs"
+  },
+  {
+    "title": "Explainable AI for Healthcare",
+    "year": 2022,
+    "problem": "Improving trust in medical AI predictions",
+    "findings": "Attention-based models enhance interpretability",
+    "limitations": "Subjectivity in interpretation evaluation"
+  },
+  {
+    "title": "Vision Transformers for Image Classification",
+    "year": 2021,
+    "problem": "Replace CNNs with attention-based architectures",
+    "findings": "Transformers outperform ResNets on large datasets",
+    "limitations": "Require extensive pretraining data"
+  },
+  {
+    "title": "Speech Recognition using Deep Learning",
+    "year": 2019,
+    "problem": "Improving accuracy in noisy environments",
+    "findings": "CNN-LSTM hybrids achieve better noise robustness",
+    "limitations": "Latency unsuitable for real-time systems"
+  },
+  {
+    "title": "Self-Supervised Learning in NLP",
+    "year": 2020,
+    "problem": "Leveraging unlabeled text data for representation learning",
+    "findings": "Masked language models enable transfer learning",
+    "limitations": "Compute-intensive training process"
+  },
+  {
+    "title": "Climate Prediction using Ensemble Models",
+    "year": 2022,
+    "problem": "Forecasting temperature and rainfall variations",
+    "findings": "Stacked ensemble improves accuracy over single models",
+    "limitations": "Dependent on quality of input data sources"
+  },
+  {
+    "title": "Autonomous Driving with Multi-Sensor Fusion",
+    "year": 2021,
+    "problem": "Combining camera, LiDAR, and radar data for navigation",
+    "findings": "Sensor fusion enhances obstacle detection reliability",
+    "limitations": "Synchronization and calibration challenges"
+  },
+  {
+    "title": "Quantum Machine Learning for Optimization",
+    "year": 2023,
+    "problem": "Solving combinatorial optimization using quantum circuits",
+    "findings": "Quantum annealing achieves faster convergence on small datasets",
+    "limitations": "Limited by qubit noise and availability"
+  },
+  {
+    "title": "Ethical Implications of Generative AI",
+    "year": 2023,
+    "problem": "Managing bias and misinformation in AI-generated content",
+    "findings": "Human-in-the-loop review reduces ethical risks",
+    "limitations": "Difficult to scale for massive AI outputs"
+  },
+  {
+    "title": "Reinforcement Learning for Robotics",
+    "year": 2020,
+    "problem": "Enabling robots to learn complex motor control tasks",
+    "findings": "Policy gradient methods achieve superior adaptability",
+    "limitations": "Requires extensive simulation data"
+  },
+  {
+    "title": "IoT Security using Machine Learning",
+    "year": 2019,
+    "problem": "Detecting anomalies in connected devices",
+    "findings": "Random forest models detect intrusions with 95% accuracy",
+    "limitations": "Fails under adversarial attacks"
+  },
+  {
+    "title": "Zero-Shot Learning for Object Recognition",
+    "year": 2021,
+    "problem": "Recognizing unseen classes using semantic embeddings",
+    "findings": "Visual-semantic alignment improves unseen class prediction",
+    "limitations": "Bias towards seen classes"
+  },
+  {
+    "title": "Large Language Models for Code Generation",
+    "year": 2023,
+    "problem": "Automatically writing code from natural language",
+    "findings": "Codex and CodeT5 achieve high accuracy in structured tasks",
+    "limitations": "Struggle with ambiguous or incomplete instructions"
+  },
+  {
+    "title": "AI-based Crop Disease Detection",
+    "year": 2022,
+    "problem": "Identifying plant diseases from leaf images",
+    "findings": "CNN models achieve 97% accuracy under controlled conditions",
+    "limitations": "Fails under variable lighting and real-world noise"
+  }
+]

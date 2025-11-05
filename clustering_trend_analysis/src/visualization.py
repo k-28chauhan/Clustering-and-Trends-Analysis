@@ -62,9 +62,16 @@ def create_interactive_visualizations(
 	logging.info("Saved scatter plot to %s", scatter_path)
 
 	# Yearly trend: number of publications per cluster per year (if year column exists)
-	if "year" in df.columns:
+	# Yearly trend: number of publications per cluster per year (if year column exists)
+	year_col = None
+	for c in ["year", "Year"]:
+		if c in df.columns:
+			year_col = c
+			break
+
+	if year_col:
 		trend_df = (
-			df.assign(year=pd.to_numeric(df["year"], errors="coerce"))
+			df.assign(year=pd.to_numeric(df[year_col], errors="coerce"))
 			.dropna(subset=["year"])
 			.groupby(["year", "cluster"], dropna=False)
 			.size()
@@ -90,6 +97,7 @@ def create_interactive_visualizations(
 			logging.warning("No valid year data found, skipping yearly trend plot")
 	else:
 		logging.info("No 'year' column found, skipping yearly trend plot")
+
 
 	return plot_paths
 

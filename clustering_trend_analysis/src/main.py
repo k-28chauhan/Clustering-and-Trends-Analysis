@@ -88,21 +88,26 @@ def main() -> None:
     # set path for cached embeddings (unique per model)
     cache_file = output_dir / f"embeddings_{args.model.replace('/', '_')}.npy"
 
+    # 2️⃣ Identify which fields to use for clustering (exclude Year)
+    cluster_fields = [f for f in args.fields if f.lower() != "year"]
+
+    # 3️⃣ Generate embeddings (auto-handles numeric/text)
     embeddings = generate_embeddings(
         df,
-        text_columns=args.fields,           # same argument as before
+        text_columns=cluster_fields,           # fields used for clustering
         model_name=args.model,
         batch_size=args.batch_size,
-        device=device,                      # new
-        cache_path=cache_file,              # new
-        overwrite_cache=False,              # reuse cache if exists
-        verbose=(args.verbosity >= 1),      # show extra info in logs
+        device=device,                         # GPU or CPU
+        cache_path=cache_file,                 # cache path
+        overwrite_cache=False,                 # reuse cache if exists
+        verbose=(args.verbosity >= 1),         # show extra info in logs
     )
+
 
     # 3️⃣ KMeans clustering + PCA
     labels, pca_2d, _ = run_clustering_and_pca(
         embeddings,
-        n_clusters=args.clusters or 5,
+        n_clusters=args.clusters,
     )
 
     # 4️⃣ Attach results & visualize

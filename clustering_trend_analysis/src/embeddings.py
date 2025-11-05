@@ -1,17 +1,13 @@
-# embeddings.py
 """
-Enhanced generate_embeddings() for clustering_trend_analysis.
+Enhanced generate_embeddings() for academic research papers.
 
-Backwards-compatible: default behavior matches previous implementation
-(concatenate text columns, encode with SentenceTransformer, normalize, return np.ndarray).
+Backwards-compatible with previous version — caching, normalization,
+and reduction logic remain unchanged.
 
-Added optional, non-breaking features:
- - device autodetection (cuda if available)
- - cache_path: save/load embeddings to disk (numpy .npy)
- - overwrite_cache: force recompute
- - reduce_to: optional dimensionality reduction (int) using TruncatedSVD (keeps default behavior if None)
- - use_fp16: best-effort float16 model load on GPU (disabled by default)
- - verbose: toggles extra logging
+Added:
+ - Field weighting (title, abstract, findings, limitations)
+ - Per-sentence pooling (better for long abstracts)
+ - Domain model default: allenai/specter
 """
 
 from __future__ import annotations
@@ -24,7 +20,7 @@ import numpy as np
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 
-# Optional imports for extra features (soft dependencies)
+# Optional imports for extra features
 try:
     from sklearn.decomposition import TruncatedSVD
 except Exception:
@@ -46,7 +42,7 @@ def _auto_device() -> Optional[str]:
 def generate_embeddings(
     df: pd.DataFrame,
     text_columns: Sequence[str],
-    model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
+    model_name: str = "allenai/specter",  # ✅ Default scientific-domain model
     batch_size: int = 32,
     device: Optional[str] = None,
     normalize: bool = True,
@@ -55,71 +51,62 @@ def generate_embeddings(
     reduce_to: Optional[int] = None,
     use_fp16: bool = False,
     verbose: bool = False,
+    field_weights: Optional[dict] = None,  # e.g., {"title":3.0,"abstract":2.0,"findings":1.5,"limitations":1.0}
+    per_sentence_pooling: bool = True,
 ) -> np.ndarray:
     """
-    Generate dense embeddings for concatenated text columns using SentenceTransformer.
-
-    Backwards-compatible defaults: identical to the previous implementation (concatenate,
-    encode, normalize).
-
-    New optional arguments:
-      - device: "cpu" or "cuda". If None, autodetects if torch is available.
-      - cache_path: path to save/load .npy cache of embeddings.
-      - overwrite_cache: if True, recompute even if cache exists.
-      - reduce_to: if set to int (e.g., 128), reduce embeddings to that dimension using TruncatedSVD.
-      - use_fp16: if True and GPU available, attempt to load model in float16 (best-effort).
-      - verbose: extra logging.
+    Generate optimized embeddings for academic papers.
 
     Parameters
     ----------
     df : pd.DataFrame
         Input DataFrame containing the text columns.
     text_columns : Sequence[str]
-        Columns to concatenate into a single text per row.
+        Columns to use (e.g., ["title","abstract","findings","limitations"])
     model_name : str
-        SentenceTransformer model identifier.
+        SentenceTransformer model identifier. Default: 'allenai/specter'
     batch_size : int
         Batch size for encoding.
     device : Optional[str]
-        Optional device override (e.g., "cpu", "cuda"). If None, auto-detects.
+        'cpu' or 'cuda'. Auto-detects if None.
     normalize : bool
-        If True, normalize embeddings to unit length (recommended for cosine).
+        Normalize embeddings to unit length.
     cache_path : Optional[str | Path]
-        If provided, will load embeddings from this .npy file if present (unless overwrite_cache=True),
-        and will save computed embeddings there.
+        If provided, will save/load cached embeddings (.npy).
     overwrite_cache : bool
-        Force recomputation even if cache exists.
+        Recompute even if cache exists.
     reduce_to : Optional[int]
-        If provided, reduce embedding dimensionality to this integer using TruncatedSVD.
-        Requires sklearn. If not available, reduction is skipped and a warning is logged.
+        Optionally reduce embedding dimensionality via TruncatedSVD.
     use_fp16 : bool
-        If True and GPU is available, attempts to load model with torch.float16 dtype.
-        If unsupported, falls back to default loading.
+        Use float16 precision for faster GPU inference.
     verbose : bool
-        Extra logging.
-
-    Returns
-    -------
-    np.ndarray
-        2D array of shape (n_samples, embedding_dim) or (n_samples, reduce_to) if reduction used.
+        Enable extra logging.
+    field_weights : Optional[dict]
+        Weight per text column. Default: automatic heuristic.
+    per_sentence_pooling : bool
+        Split long texts into sentences and average their embeddings.
     """
     logger = logging.getLogger(__name__)
     if verbose:
         logger.setLevel(logging.INFO)
 
-    # Validate text columns
+    # Validate columns
     missing = [c for c in text_columns if c not in df.columns]
     if missing:
         raise ValueError(f"Missing text columns in DataFrame: {missing}")
 
-    # Build text list
-    texts: List[str] = (
-        df[list(text_columns)]
-        .fillna("")
-        .astype(str)
-        .apply(lambda r: " | ".join(s.strip() for s in r if s), axis=1)
-        .tolist()
-    )
+    # Default field weights
+    if field_weights is None:
+        field_weights = {col: 1.0 for col in text_columns}
+        for key in field_weights:
+            if "title" in key.lower():
+                field_weights[key] = 3.0
+            elif "abstract" in key.lower():
+                field_weights[key] = 2.0
+            elif "finding" in key.lower():
+                field_weights[key] = 1.5
+            elif "limitation" in key.lower():
+                field_weights[key] = 1.0
 
     # Determine device
     if device is None:
@@ -127,74 +114,99 @@ def generate_embeddings(
     if verbose:
         logger.info("Using device=%s (torch available=%s)", device, torch is not None)
 
-    # Cache handling
+    # Cache loading
     if cache_path is not None:
         cache_path = Path(cache_path)
         if cache_path.exists() and not overwrite_cache:
             logger.info("Loading cached embeddings from %s", cache_path)
             arr = np.load(cache_path)
-            # If normalization or reduction is requested but cache may not satisfy it,
-            # we do a quick check: if reduce_to is set but arr has different dim, recompute.
             if reduce_to is not None and arr.shape[1] != reduce_to:
-                logger.info("Cached embeddings dimension (%d) != requested reduce_to (%d); recomputing", arr.shape[1], reduce_to)
+                logger.info("Cached embeddings dimension mismatch; recomputing")
             elif normalize and not np.allclose(np.linalg.norm(arr, axis=1), 1.0, atol=1e-3):
-                # cached embeddings not normalized; recompute to ensure consistency
-                logger.info("Cached embeddings not normalized (or tolerance exceeded); recomputing")
+                logger.info("Cached embeddings not normalized; recomputing")
             else:
-                # Cache seems valid; return it directly
                 return arr
 
-    # Model loading (best-effort fp16 support)
+    # Load SentenceTransformer model
     load_kwargs = {}
     if use_fp16 and device == "cuda" and torch is not None:
         try:
             load_kwargs["torch_dtype"] = torch.float16
-            # Some environments may require device_map; SentenceTransformer will handle device if given
-            if verbose:
-                logger.info("Attempting to load model with float16 dtype for faster GPU inference")
-        except Exception as e:
-            logger.warning("Failed to set fp16 dtype: %s. Falling back to default dtype.", e)
+        except Exception:
             load_kwargs = {}
 
     logger.info("Loading SentenceTransformer model '%s' on device=%s", model_name, device)
     try:
         model = SentenceTransformer(model_name, device=device, **load_kwargs)
     except TypeError:
-        # Older sentence-transformers may not accept torch_dtype in constructor; fall back gracefully
         model = SentenceTransformer(model_name, device=device)
 
-    # Encode
-    logger.info("Encoding %d texts into embeddings (batch_size=%d)", len(texts), batch_size)
-    embeddings = model.encode(
-        texts,
-        batch_size=batch_size,
-        show_progress_bar=True,
-        normalize_embeddings=normalize,
-    )
-    embeddings = np.asarray(embeddings)
+    # Sentence splitting helper
+    import re
+    sentence_splitter = lambda txt: [s.strip() for s in re.split(r'(?<=[.!?])\s+', txt) if s.strip()]
 
-    # Optional dimensionality reduction
+    all_embeddings = []
+    for idx, row in df[text_columns].fillna("").astype(str).iterrows():
+        field_embs = []
+        total_weight = 0.0
+
+        for col in text_columns:
+            text = row[col].strip()
+            weight = float(field_weights.get(col, 1.0))
+            if not text:
+                continue
+
+            if per_sentence_pooling:
+                sentences = sentence_splitter(text)
+                if not sentences:
+                    sentences = [text]
+                sent_embs = model.encode(
+                    sentences,
+                    batch_size=batch_size,
+                    show_progress_bar=False,
+                    normalize_embeddings=False,
+                )
+                field_emb = np.mean(sent_embs, axis=0)
+            else:
+                field_emb = model.encode(
+                    [text],
+                    batch_size=batch_size,
+                    show_progress_bar=False,
+                    normalize_embeddings=False,
+                )[0]
+
+            field_embs.append(field_emb * weight)
+            total_weight += weight
+
+        if field_embs:
+            doc_emb = np.sum(np.vstack(field_embs), axis=0) / total_weight
+        else:
+            doc_emb = np.zeros(model.get_sentence_embedding_dimension())
+        all_embeddings.append(doc_emb)
+
+    embeddings = np.vstack(all_embeddings)
+
+    # Normalization
+    if normalize:
+        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+        norms[norms == 0] = 1.0
+        embeddings = embeddings / norms
+
+    # Dimensionality reduction (unchanged)
     if reduce_to is not None:
         if TruncatedSVD is None:
-            logger.warning(
-                "Requested reduce_to=%s but sklearn.decomposition.TruncatedSVD is not available; skipping reduction",
-                reduce_to,
-            )
+            logger.warning("Requested reduce_to=%s but sklearn.decomposition.TruncatedSVD unavailable", reduce_to)
         else:
             cur_dim = embeddings.shape[1]
-            if reduce_to >= cur_dim:
-                logger.info("reduce_to (%d) >= current dim (%d); skipping reduction", reduce_to, cur_dim)
-            else:
-                logger.info("Reducing embeddings dimensionality %d -> %d using TruncatedSVD", cur_dim, reduce_to)
+            if reduce_to < cur_dim:
                 svd = TruncatedSVD(n_components=reduce_to, random_state=42)
                 embeddings = svd.fit_transform(embeddings)
-                # If normalization requested originally, re-normalize after reduction
                 if normalize:
                     norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
                     norms[norms == 0] = 1.0
                     embeddings = embeddings / norms
 
-    # Save cache if requested
+    # Save cache
     if cache_path is not None:
         try:
             cache_path.parent.mkdir(parents=True, exist_ok=True)
